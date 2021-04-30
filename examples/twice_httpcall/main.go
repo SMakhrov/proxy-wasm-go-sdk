@@ -35,10 +35,10 @@ func newRootContext(uint32) proxywasm.RootContext { return &rootContext{} }
 
 // Override DefaultRootContext.
 func (*rootContext) NewHttpContext(contextID uint32) proxywasm.HttpContext {
-	return &httpHeaders{contextID: contextID}
+	return &httpHeadersBody{contextID: contextID}
 }
 
-type httpHeaders struct {
+type httpHeadersBody struct {
 	// You'd better embed the default root context
 	// so that you don't need to reimplement all the methods by yourself.
 	proxywasm.DefaultHttpContext
@@ -46,7 +46,7 @@ type httpHeaders struct {
 }
 
 // Override DefaultHttpContext.
-func (ctx *httpHeaders) OnHttpRequestHeaders(numHeaders int, endOfStream bool) types.Action {
+func (ctx *httpHeadersBody) OnHttpRequestHeaders(numHeaders int, endOfStream bool) types.Action {
 	hs, err := proxywasm.GetHttpRequestHeaders()
 	if err != nil {
 		proxywasm.LogCriticalf("failed to get request headers: %v", err)
@@ -57,6 +57,10 @@ func (ctx *httpHeaders) OnHttpRequestHeaders(numHeaders int, endOfStream bool) t
 		proxywasm.LogInfof("request header --> %s: %s", h[0], h[1])
 	}
 
+	return types.ActionContinue
+}
+
+func (ctx *httpHeadersBody) OnHttpRequestBody(bodySize int, endOfStream bool) types.Action {
 	if _, err := proxywasm.DispatchHttpCall("web_service_canary", original_headers, "", nil,
 		5000, callback1); err != nil {
 		proxywasm.LogCriticalf("dispatch httpcall 1 failed: %v", err)
